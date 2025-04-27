@@ -1,44 +1,6 @@
-/// A Flutter package for converting 2D images to 3D models with AR visualization
-/// capabilities. This package integrates native AR technologies (ARKit for iOS and
-/// ARCore for Android) to provide immersive AR experiences. It allows you to:
-///
-/// 1. Convert furniture images to 3D models and place them in your real-world
-///    environment using AR
-/// 2. Convert glasses/eyewear images to 3D models and try them on your face using
-///    face tracking (iOS only)
-/// 3. Convert generic objects to 3D models for AR visualization
-///
-/// ## Features
-///
-/// - **Image to 3D Conversion**: Convert 2D images to 3D models using advanced
-///   image processing
-/// - **AR Visualization**: Place 3D furniture models in your real-world
-///   environment using ARKit/ARCore
-/// - **Face AR**: Try on glasses and eyewear in AR using face tracking (iOS only)
-/// - **Native Integration**: Deep integration with platform-specific AR frameworks
-/// - **Error Handling**: Robust error handling and fallbacks for unsupported devices
-/// - **Easy API**: Simple Flutter API that abstracts away the complexity of AR
-///
-/// ## Requirements
-///
-/// - Flutter SDK: ^3.7.2
-/// - iOS 11.0+ for AR functionality (iOS 12.0+ recommended for face tracking)
-/// - Android with ARCore support for AR functionality (Android 7.0+ with Google
-///   Play Services for AR)
-/// - Camera permission
-/// - Storage permission
-/// - Internet permission (for downloading 3D models)
-///
-/// **Important**: This package requires native code implementation and cannot be
-/// used with Flutter web.
-///
-/// ## Installation
-///
-/// Add the package to your `pubspec.yaml`:
-///
-/// 
-
 # Flutter 3D AR Converter
+
+[![GitHub](https://img.shields.io/badge/GitHub-draz26648/flutter_3d_ar_converter-blue.svg)](https://github.com/draz26648/flutter_3d_ar_converter)
 
 A Flutter package for converting 2D images to 3D models with AR visualization capabilities. This package integrates native AR technologies (ARKit for iOS and ARCore for Android) to provide immersive AR experiences. It allows you to:
 
@@ -135,6 +97,16 @@ import 'package:flutter_3d_ar_converter/flutter_3d_ar_converter.dart';
 // Initialize the package
 final converter = Flutter3dArConverter();
 await converter.initialize();
+
+// Check if AR is available on the device
+if (converter.isARAvailable) {
+  print('AR is available on this device');
+}
+
+// Check if face tracking is available (iOS only)
+if (converter.isFaceTrackingAvailable) {
+  print('Face tracking is available on this device');
+}
 ```
 
 ### Convert an Image to a 3D Model
@@ -145,18 +117,32 @@ final imageConverter = ImageTo3DConverter();
 
 // Pick an image from gallery
 final imageFile = await imageConverter.pickImage();
+// Or from camera
+// final imageFile = await imageConverter.pickImage(fromCamera: true);
 
-// Convert the image to a 3D model
-final modelData = await imageConverter.convertImageTo3D(
-  imageFile,
-  ModelType.furniture, // or ModelType.glasses, ModelType.object
-);
+if (imageFile != null) {
+  // Convert the image to a 3D model
+  final modelData = await imageConverter.convertImageTo3D(
+    imageFile,
+    ModelType.furniture, // or ModelType.glasses, ModelType.object
+    // Optional additional parameters
+    additionalParams: {
+      'quality': 'high',
+      'format': 'glb',
+    },
+  );
+  
+  if (modelData != null) {
+    print('Model created at: ${modelData.modelPath}');
+    print('Model type: ${modelData.type}');
+  }
+}
 ```
 
 ### Display a 3D Model in AR
 
 ```dart
-// Display furniture in AR
+// Display furniture or object in AR
 Navigator.push(
   context,
   MaterialPageRoute(
@@ -166,28 +152,35 @@ Navigator.push(
         print('AR view created');
       },
       onObjectPlaced: (node) {
-        print('Object placed');
+        print('Object placed at: ${node.position}');
       },
     ),
   ),
 );
 ```
 
-### Try on Glasses in AR
+### Try on Glasses in AR (iOS Only)
 
 ```dart
 // Display glasses on face in AR
-Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (context) => FaceARViewer(
-      modelData: modelData,
-      onARViewCreated: () {
-        print('Face AR view created');
-      },
+if (Platform.isIOS) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => FaceARViewer(
+        modelData: modelData,
+        onARViewCreated: () {
+          print('Face AR view created');
+        },
+      ),
     ),
-  ),
-);
+  );
+} else {
+  // Show a message for Android users
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('Face AR is only available on iOS devices')),
+  );
+}
 ```
 
 ## Example App

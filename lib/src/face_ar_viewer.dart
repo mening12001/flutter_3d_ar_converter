@@ -14,7 +14,11 @@ class FaceARViewer extends StatefulWidget {
   final Function()? onARViewCreated;
 
   /// Constructor
-  const FaceARViewer({super.key, required this.modelData, this.onARViewCreated});
+  const FaceARViewer({
+    super.key,
+    required this.modelData,
+    this.onARViewCreated,
+  });
 
   @override
   FaceARViewerState createState() => FaceARViewerState();
