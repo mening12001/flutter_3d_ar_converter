@@ -2,6 +2,7 @@ library;
 
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 // Export main components
@@ -58,7 +59,7 @@ class Flutter3dArConverter {
       final String? platformVersion = await _channel.invokeMethod(
         'getPlatformVersion',
       );
-      print('Running on: $platformVersion');
+      debugPrint('Running on: $platformVersion');
 
       // Check AR availability
       _isARAvailable =
@@ -84,7 +85,7 @@ class Flutter3dArConverter {
 
       return _isInitialized;
     } catch (e) {
-      print('Error initializing Flutter3dArConverter: $e');
+      debugPrint('Error initializing Flutter3dArConverter: $e');
       _isInitialized = false;
       return false;
     }

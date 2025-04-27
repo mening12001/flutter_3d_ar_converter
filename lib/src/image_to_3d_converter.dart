@@ -1,7 +1,5 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_3d_ar_converter/src/models/model_data.dart';
 import 'package:flutter_3d_ar_converter/src/utils/file_utils.dart';
@@ -115,6 +113,9 @@ class ImageTo3DConverter {
   /// 2. Check conversion status
   /// 3. Download the resulting 3D model
 
+  // This method is commented out to avoid unused code warnings, but kept as reference
+  // for how a real API integration would work in a production implementation.
+  /*
   /// Example of what a real API call might look like:
   Future<Map<String, dynamic>?> _realApiCall(
     File imageFile,
@@ -145,15 +146,16 @@ class ImageTo3DConverter {
       // Check if the request was successful
       if (response.statusCode == 200) {
         // Parse the response
-        final responseBody = await response.stream.bytesToString();
-        return json.decode(responseBody) as Map<String, dynamic>;
+        final responseData = await response.stream.bytesToString();
+        return jsonDecode(responseData) as Map<String, dynamic>;
       } else {
-        debugPrint('API error: ${response.statusCode}');
+        debugPrint('Error: ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      debugPrint('API call error: $e');
+      debugPrint('Error calling API: $e');
       return null;
     }
   }
+  */
 }

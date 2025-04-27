@@ -456,9 +456,11 @@ class FaceARViewerState extends State<FaceARViewer>
 
   /// Create a material for the glasses lenses
   ARKitMaterial _createGlassMaterial() {
+    // Using Color.fromRGBO instead of withOpacity to avoid deprecation warning
+    final blueWithOpacity = Color.fromRGBO(0, 0, 255, 0.5);
     final material = ARKitMaterial(
       transparency: 0.5,
-      diffuse: ARKitMaterialProperty.color(Colors.blue.withOpacity(0.5)),
+      diffuse: ARKitMaterialProperty.color(blueWithOpacity),
       specular: ARKitMaterialProperty.color(Colors.white),
     );
     return material;
