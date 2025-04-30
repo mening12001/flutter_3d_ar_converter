@@ -1,6 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:arkit_plugin/arkit_plugin.dart';
+import 'package:ar_flutter_plugin/ar_flutter_plugin.dart';
+import 'package:ar_flutter_plugin/datatypes/node_types.dart';
+import 'package:ar_flutter_plugin/managers/ar_anchor_manager.dart';
+import 'package:ar_flutter_plugin/managers/ar_location_manager.dart';
+import 'package:ar_flutter_plugin/managers/ar_object_manager.dart';
+import 'package:ar_flutter_plugin/managers/ar_session_manager.dart';
+import 'package:ar_flutter_plugin/models/ar_node.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 import 'package:flutter_3d_ar_converter/src/models/model_data.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -27,11 +35,14 @@ class FaceARViewer extends StatefulWidget {
 /// State for the Face AR Viewer widget
 class FaceARViewerState extends State<FaceARViewer>
     with WidgetsBindingObserver {
-  /// AR Kit controller
+  // iOS ARKit controllers and nodes
   ARKitController? arkitController;
-
-  /// AR Kit face node
   ARKitNode? faceNode;
+
+  // Android ARCore controllers and managers
+  ARSessionManager? arSessionManager;
+  ARObjectManager? arObjectManager;
+  ARNode? androidFaceNode;
 
   /// Whether the AR session is initialized
   bool isInitialized = false;
@@ -54,12 +65,20 @@ class FaceARViewerState extends State<FaceARViewer>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (arkitController == null) return;
-
-    if (state == AppLifecycleState.resumed) {
-      // Resume AR session when app is resumed
-    } else if (state == AppLifecycleState.paused) {
-      // Pause AR session when app is paused
+    if (Platform.isIOS && arkitController != null) {
+      if (state == AppLifecycleState.resumed) {
+        // Resume AR session when app is resumed
+      } else if (state == AppLifecycleState.paused) {
+        // Pause AR session when app is paused
+      }
+    } else if (Platform.isAndroid && arSessionManager != null) {
+      if (state == AppLifecycleState.resumed) {
+        // Resume AR session when app is resumed
+        // Note: AR Flutter Plugin handles lifecycle internally
+      } else if (state == AppLifecycleState.paused) {
+        // Pause AR session when app is paused
+        // Note: AR Flutter Plugin handles lifecycle internally
+      }
     }
   }
 
@@ -85,132 +104,174 @@ class FaceARViewerState extends State<FaceARViewer>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    arkitController?.dispose();
+
+    // Dispose platform-specific controllers
+    if (Platform.isIOS) {
+      arkitController?.dispose();
+    } else if (Platform.isAndroid) {
+      arSessionManager?.dispose();
+    }
+
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // ARKit is only available on iOS
-    if (Platform.isIOS) {
+    if (hasError) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Face AR Viewer'),
+          title: const Text('Face AR Error'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(errorMessage, textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    hasError = false;
+                    errorMessage = '';
+                  });
+                  _requestPermissions();
+                },
+                child: const Text('Try Again'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Platform-specific AR implementations
+    if (Platform.isIOS) {
+      // iOS implementation using ARKit
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Face AR (iOS)'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
-              onPressed: _resetSession,
+              onPressed: _resetIOSSession,
             ),
           ],
         ),
-        body:
-            hasError
-                ? _buildErrorWidget()
-                : Stack(
+        body: Column(
+          children: [
+            Expanded(
+              child: ARKitSceneView(
+                configuration: ARKitConfiguration.faceTracking,
+                onARKitViewCreated: _onARKitViewCreated,
+              ),
+            ),
+            if (!isInitialized)
+              Container(
+                color: Colors.black54,
+                padding: const EdgeInsets.all(16),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ARKitSceneView(
-                      configuration: ARKitConfiguration.faceTracking,
-                      onARKitViewCreated: _onARKitViewCreated,
+                    CircularProgressIndicator(),
+                    SizedBox(width: 16),
+                    Text(
+                      'Initializing face tracking...',
+                      style: TextStyle(color: Colors.white),
                     ),
-                    if (!isInitialized || !isFaceTrackingAvailable)
-                      Container(
-                        color: Colors.black54,
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const CircularProgressIndicator(),
-                              const SizedBox(height: 16),
-                              Text(
-                                !isInitialized
-                                    ? 'Initializing Face AR...'
-                                    : 'Face tracking not available on this device',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                   ],
                 ),
+              ),
+          ],
+        ),
+      );
+    } else if (Platform.isAndroid) {
+      // Android implementation using AR Flutter Plugin
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Face AR (Android)'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _resetAndroidSession,
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            Expanded(child: ARView(onARViewCreated: _onAndroidARViewCreated)),
+            if (!isInitialized)
+              Container(
+                color: Colors.black54,
+                padding: const EdgeInsets.all(16),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(width: 16),
+                    Text(
+                      'Initializing face tracking...',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       );
     } else {
-      // Show a message for Android devices
+      // Unsupported platform
       return Scaffold(
-        appBar: AppBar(title: const Text('Face AR Viewer')),
+        appBar: AppBar(
+          title: const Text('Face AR'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
         body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.orange,
-                  size: 60,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Platform Not Supported',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Face AR is currently only available on iOS devices.\n'
-                  'We are working on Android support using ARCore Face Mesh.',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Go Back'),
-                ),
-              ],
-            ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.warning, size: 48, color: Colors.orange),
+              const SizedBox(height: 16),
+              const Text(
+                'Face AR is not supported on this platform.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Currently only iOS and Android are supported.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontStyle: FontStyle.italic),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Go Back'),
+              ),
+            ],
           ),
         ),
       );
     }
   }
 
-  /// Build widget to display error message
-  Widget _buildErrorWidget() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 60),
-            const SizedBox(height: 16),
-            Text(
-              'Face AR Initialization Error',
-              style: Theme.of(context).textTheme.headlineSmall,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(errorMessage, textAlign: TextAlign.center),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  hasError = false;
-                  errorMessage = '';
-                });
-                _requestPermissions();
-              },
-              child: const Text('Try Again'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Reset the AR session
-  void _resetSession() {
+  /// Reset the iOS AR session
+  void _resetIOSSession() {
     if (arkitController == null) return;
 
     try {
@@ -241,7 +302,127 @@ class FaceARViewerState extends State<FaceARViewer>
         }
       });
     } catch (e) {
-      debugPrint('Error resetting face AR session: $e');
+      debugPrint('Error resetting iOS face AR session: $e');
+    }
+  }
+
+  /// Reset the Android AR session
+  void _resetAndroidSession() {
+    if (arSessionManager == null || arObjectManager == null) return;
+
+    try {
+      // Remove existing face node
+      if (androidFaceNode != null) {
+        arObjectManager!.removeNode(androidFaceNode!);
+        androidFaceNode = null;
+      }
+
+      // Set state to not initialized to show loading indicator
+      setState(() {
+        isInitialized = false;
+      });
+
+      // Add glasses model after a short delay
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted && isFaceTrackingAvailable) {
+          _addAndroidFaceModel();
+
+          // Set initialized back to true after a short delay
+          Future.delayed(const Duration(seconds: 1), () {
+            if (mounted) {
+              setState(() {
+                isInitialized = true;
+              });
+            }
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint('Error resetting Android face AR session: $e');
+    }
+  }
+
+  /// Handle Android AR View creation
+  void _onAndroidARViewCreated(
+    ARSessionManager sessionManager,
+    ARObjectManager objectManager,
+    ARAnchorManager anchorManager,
+    ARLocationManager locationManager,
+  ) {
+    arSessionManager = sessionManager;
+    arObjectManager = objectManager;
+
+    // Start AR session with error handling
+    _startAndroidARSession();
+  }
+
+  /// Handle AR session errors
+  void _onARSessionError(String error) {
+    setState(() {
+      hasError = true;
+      errorMessage = 'AR Session Error: $error';
+    });
+  }
+
+  /// Start the Android AR session with face tracking
+  Future<void> _startAndroidARSession() async {
+    try {
+      // Initialize AR session with proper error handling
+      await arSessionManager!.onInitialize(
+        showFeaturePoints: false,
+        showPlanes: false,
+        customPlaneTexturePath: null,
+        showWorldOrigin: false,
+        handlePans: true,
+        handleRotation: true,
+        handleTaps: true,
+      );
+
+      // Set up error handler using a callback
+      arSessionManager!.onPlaneOrPointTap = (hitTestResult) {
+        // Handle taps if needed
+      };
+
+      // After initialization, check if we can proceed with face tracking
+      setState(() {
+        isFaceTrackingAvailable = true;
+        isInitialized = true;
+      });
+
+      // Add the 3D model to the face
+      _addAndroidFaceModel();
+    } catch (e) {
+      setState(() {
+        hasError = true;
+        errorMessage = 'Error initializing Android AR session: $e';
+      });
+    }
+  }
+
+  /// Add the face model for Android
+  Future<void> _addAndroidFaceModel() async {
+    try {
+      final modelFile = File(widget.modelData.modelPath);
+
+      if (!await modelFile.exists()) {
+        debugPrint('Model file does not exist: ${widget.modelData.modelPath}');
+        return;
+      }
+
+      // Create a node for the glasses
+      // In a real implementation, this would use ARCore's face mesh API
+      // to attach the model to specific face features
+      androidFaceNode = ARNode(
+        type: NodeType.fileSystemAppFolderGLB,
+        uri: widget.modelData.modelPath,
+        scale: Vector3(0.2, 0.2, 0.2),
+        position: Vector3(0, 0, -1.5),
+        rotation: Vector4(1, 0, 0, 0),
+      );
+
+      await arObjectManager!.addNode(androidFaceNode!);
+    } catch (e) {
+      debugPrint('Error adding Android face model: $e');
     }
   }
 

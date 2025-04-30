@@ -65,13 +65,20 @@ class Flutter3dArConverter {
       _isARAvailable =
           await _channel.invokeMethod('checkARAvailability') ?? false;
 
-      // Check face tracking availability (iOS only)
+      // Check face tracking availability (iOS and Android)
       if (Platform.isIOS) {
         _isFaceTrackingAvailable =
             await _channel.invokeMethod('checkFaceTrackingAvailability') ??
             false;
+      } else if (Platform.isAndroid) {
+        // For Android, we use ARCore's Face API
+        _isFaceTrackingAvailable =
+            await _channel.invokeMethod(
+              'checkAndroidFaceTrackingAvailability',
+            ) ??
+            false;
       } else {
-        _isFaceTrackingAvailable = false; // Not supported on Android yet
+        _isFaceTrackingAvailable = false; // Not supported on other platforms
       }
 
       // Initialize AR if available

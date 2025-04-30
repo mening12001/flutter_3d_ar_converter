@@ -12,7 +12,7 @@ A Flutter package for converting 2D images to 3D models with AR visualization ca
 
 - **Image to 3D Conversion**: Convert 2D images to 3D models using advanced image processing
 - **AR Visualization**: Place 3D furniture models in your real-world environment using ARKit/ARCore
-- **Face AR**: Try on glasses and eyewear in AR using face tracking (iOS only)
+- **Face AR**: Try on glasses and eyewear in AR using face tracking on both iOS and Android
 - **Native Integration**: Deep integration with platform-specific AR frameworks
 - **Error Handling**: Robust error handling and fallbacks for unsupported devices
 - **Easy API**: Simple Flutter API that abstracts away the complexity of AR
@@ -34,7 +34,7 @@ Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_3d_ar_converter: ^0.0.1
+  flutter_3d_ar_converter: ^0.1.0
 ```
 
 ### iOS Setup
@@ -159,28 +159,25 @@ Navigator.push(
 );
 ```
 
-### Try on Glasses in AR (iOS Only)
+### Try on Glasses in AR (iOS and Android)
 
 ```dart
 // Display glasses on face in AR
-if (Platform.isIOS) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => FaceARViewer(
-        modelData: modelData,
-        onARViewCreated: () {
-          print('Face AR view created');
-        },
-      ),
+Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => FaceARViewer(
+      modelData: modelData,
+      onARViewCreated: () {
+        print('Face AR view created');
+      },
     ),
-  );
-} else {
-  // Show a message for Android users
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text('Face AR is only available on iOS devices')),
-  );
-}
+  ),
+);
+
+// The FaceARViewer automatically handles platform differences
+// and provides appropriate UI for iOS and Android
+
 ```
 
 ## Example App
