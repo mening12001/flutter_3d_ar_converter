@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:arkit_plugin/arkit_plugin.dart';
 import 'package:ar_flutter_plugin/ar_flutter_plugin.dart';
 import 'package:ar_flutter_plugin/datatypes/node_types.dart';
@@ -356,13 +355,7 @@ class FaceARViewerState extends State<FaceARViewer>
     _startAndroidARSession();
   }
 
-  /// Handle AR session errors
-  void _onARSessionError(String error) {
-    setState(() {
-      hasError = true;
-      errorMessage = 'AR Session Error: $error';
-    });
-  }
+
 
   /// Start the Android AR session with face tracking
   Future<void> _startAndroidARSession() async {
