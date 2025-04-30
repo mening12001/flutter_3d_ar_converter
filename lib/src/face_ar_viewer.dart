@@ -355,8 +355,6 @@ class FaceARViewerState extends State<FaceARViewer>
     _startAndroidARSession();
   }
 
-
-
   /// Start the Android AR session with face tracking
   Future<void> _startAndroidARSession() async {
     try {

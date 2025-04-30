@@ -1,3 +1,12 @@
+## 0.1.1 
+
+## Bug Fixes
+* Fixed duplicate class definitions in FaceARViewer
+* Resolved UI layout issues on Android devices
+* Fixed permission handling for camera access
+* Corrected model positioning in Face AR mode
+* Follow dart formatting
+
 ## 0.1.0 - Cross-Platform Face AR Support (April 2025)
 
 ### New Features
