@@ -164,10 +164,12 @@ class ARViewerState extends State<ARViewer> with WidgetsBindingObserver {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         FloatingActionButton(
+                          heroTag: "1234",
                           onPressed: _addModelToScene,
                           child: const Icon(Icons.add),
                         ),
                         FloatingActionButton(
+                          heroTag: "234",
                           onPressed: _removeAllModels,
                           child: const Icon(Icons.delete),
                         ),
